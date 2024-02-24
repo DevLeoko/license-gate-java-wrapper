@@ -25,7 +25,7 @@ import java.util.Base64;
 public class LicenseGate {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final String DEFAULT_SERVER = "https://licensegate.com";
+    private static final String DEFAULT_SERVER = "https://api.licensegate.io";
 
     private String userId;
     private String publicRsaKey;
