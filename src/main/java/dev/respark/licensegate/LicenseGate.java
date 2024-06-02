@@ -1,7 +1,6 @@
 package dev.respark.licensegate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -24,7 +23,6 @@ import java.util.Base64;
  */
 public class LicenseGate {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String DEFAULT_SERVER = "https://api.licensegate.io";
 
     private String userId;
@@ -132,16 +130,16 @@ public class LicenseGate {
     public ValidationType verify(String licenseKey, String scope, String metadata) {
         try {
             String challenge = this.useChallenges ? String.valueOf(System.currentTimeMillis()) : null;
-            ObjectNode response = requestServer(buildUrl(licenseKey, scope, metadata, challenge));
+            JSONObject response = requestServer(buildUrl(licenseKey, scope, metadata, challenge));
 
             if (response.has("error") || !response.has("result")) {
-                if (debug) System.out.println("Error: " + response.get("error").asText());
+                if (debug) System.out.println("Error: " + response.getString("error"));
                 return ValidationType.SERVER_ERROR;
             }
 
             // Non-valid response don't need a signed challenge
-            if (response.has("valid") && !response.get("valid").asBoolean()) {
-                ValidationType result = ValidationType.valueOf(response.get("result").asText());
+            if (response.has("valid") && !response.getBoolean("valid")) {
+                ValidationType result = ValidationType.valueOf(response.getString("result"));
                 if (result == ValidationType.VALID) {
                     return ValidationType.SERVER_ERROR;
                 } else {
@@ -155,13 +153,13 @@ public class LicenseGate {
                     return ValidationType.FAILED_CHALLENGE;
                 }
 
-                if (!verifyChallenge(challenge, response.get("signedChallenge").asText())) {
+                if (!verifyChallenge(challenge, response.getString("signedChallenge"))) {
                     if (debug) System.out.println("Error: Challenge verification failed");
                     return ValidationType.FAILED_CHALLENGE;
                 }
             }
 
-            return ValidationType.valueOf(response.get("result").asText());
+            return ValidationType.valueOf(response.getString("result"));
         } catch (IOException e) {
             if (debug) e.printStackTrace();
             return ValidationType.CONNECTION_ERROR;
@@ -220,7 +218,7 @@ public class LicenseGate {
         return validationServer + "/license/" + userId + "/" + licenseKey + "/verify" + queryString;
     }
 
-    private ObjectNode requestServer(String urlStr) throws IOException {
+    private JSONObject requestServer(String urlStr) throws IOException {
         URL url = new URL(urlStr);
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod("GET");
@@ -248,7 +246,7 @@ public class LicenseGate {
             }
 
             // Parse JSON response
-            return OBJECT_MAPPER.readValue(jsonStr, ObjectNode.class);
+            return new JSONObject(jsonStr);
         }
     }
 
